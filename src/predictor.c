@@ -7,7 +7,7 @@
 //========================================================//
 #include <stdio.h>
 #include "predictor.h"
-
+#define maxNumEntries (1 << 13)-1
 //
 // TODO:Student Information
 //
@@ -33,10 +33,10 @@ int verbose;
 //      Predictor Data Structures     //
 //------------------------------------//
 
-//
-//TODO: Add your own Branch Predictor data structures here
-//
-
+// in our PHT, 00 = 0 (SN, Strongly Not Taken), 01 = 1 (WN, Weakly Not Taken)
+//             10 = 2 (WT, Weakly Taken), and 11 = 3 (ST, Strongly Taken)
+uint8_t PHT[maxNumEntries];
+uint32_t historyReg;
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -47,9 +47,13 @@ int verbose;
 void
 init_predictor()
 {
-  //
-  //TODO: Initialize Branch Predictor Data Structures
-  //
+  // initialize to WN (Weakly Not Taken)
+  for (int i = 0; i < maxNumEntries; i++) {
+    PHT[i] = WN;
+  }
+
+  // initialize global history register to NT (Not Taken)
+  historyReg = 0;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'
@@ -59,15 +63,25 @@ init_predictor()
 uint8_t
 make_prediction(uint32_t pc)
 {
-  //
-  //TODO: Implement prediction scheme
-  //
-
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
       return TAKEN;
     case GSHARE:
+        // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+        uint32_t pcMasked = pc & ((1 << ghistoryBits)-1);
+        // XOR the global history register with the masked pc to get the index into the PHT
+        uint32_t index = historyReg ^ pcMasked;
+        // use the index to retrieve the prediction from the PHT
+        uint8_t prediction = PHT[index];
+
+        if (prediction == WT || prediction == ST) {
+          return TAKEN;
+        } 
+        else if (prediction == WN || prediction == SN) {
+          return NOTTAKEN;
+        }
+        break;
     case TOURNAMENT:
     case CUSTOM:
     default:
@@ -85,7 +99,5 @@ make_prediction(uint32_t pc)
 void
 train_predictor(uint32_t pc, uint8_t outcome)
 {
-  //
-  //TODO: Implement Predictor training
-  //
+  
 }

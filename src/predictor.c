@@ -53,7 +53,7 @@ init_predictor()
   }
 
   // initialize global history register to NT (Not Taken)
-  historyReg = 0;
+  historyReg = NOTTAKEN;
 }
 
 // Make a prediction for conditional branch instruction at PC 'pc'

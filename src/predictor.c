@@ -63,17 +63,21 @@ init_predictor()
 uint8_t
 make_prediction(uint32_t pc)
 {
+  uint32_t pcMasked;
+  uint32_t index;
+  uint8_t prediction;
+  
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
       return TAKEN;
     case GSHARE:
         // use a mask to get the lower # of bits where the # of bits = ghistoryBits
-        uint32_t pcMasked = pc & ((1 << ghistoryBits)-1);
+        pcMasked = pc & ((1 << ghistoryBits)-1);
         // XOR the global history register with the masked pc to get the index into the PHT
-        uint32_t index = historyReg ^ pcMasked;
+        index = historyReg ^ pcMasked;
         // use the index to retrieve the prediction from the PHT
-        uint8_t prediction = PHT[index];
+        prediction = PHT[index];
 
         if (prediction == WT || prediction == ST) {
           return TAKEN;

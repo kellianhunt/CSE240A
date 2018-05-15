@@ -7,7 +7,7 @@
 //========================================================//
 #include <stdio.h>
 #include "predictor.h"
-#define maxNumEntries (1 << 13)-1
+#define maxNumEntries 1 << 13
 //
 // TODO:Student Information
 //
@@ -52,7 +52,7 @@ init_predictor()
     PHT[i] = WN;
   }
 
-  // initialize global history register to NT (Not Taken)
+  // initialize global history register to NOTTAKEN (Not Taken)
   historyReg = NOTTAKEN;
 }
 
@@ -64,9 +64,10 @@ uint8_t
 make_prediction(uint32_t pc)
 {
   uint32_t pcMasked;
+  uint32_t regMasked;
   uint32_t index;
   uint8_t prediction;
-  
+
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
@@ -74,8 +75,10 @@ make_prediction(uint32_t pc)
     case GSHARE:
         // use a mask to get the lower # of bits where the # of bits = ghistoryBits
         pcMasked = pc & ((1 << ghistoryBits)-1);
+        // mask the history reg
+        regMasked = historyReg & ((1 << ghistoryBits)-1);
         // XOR the global history register with the masked pc to get the index into the PHT
-        index = historyReg ^ pcMasked;
+        index = regMasked ^ pcMasked;
         // use the index to retrieve the prediction from the PHT
         prediction = PHT[index];
 
@@ -103,5 +106,30 @@ make_prediction(uint32_t pc)
 void
 train_predictor(uint32_t pc, uint8_t outcome)
 {
+  uint32_t pcMasked;
+  uint32_t index;
+  uint8_t prediction;
+
+  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  pcMasked = pc & ((1 << ghistoryBits)-1);
+  // XOR the global history register with the masked pc to get the index into the PHT
+  index = historyReg ^ pcMasked;
+  // use the index to retrieve the prediction from the PHT
+  prediction = PHT[index];
+
+  if (prediction == SN && outcome == TAKEN) {
+    PHT[index] = WN;
+  } else if (prediction == WN && outcome == NOTTAKEN) {
+    PHT[index] = SN;
+  } else if (prediction == WN && outcome == TAKEN) {
+    PHT[index] = WT;
+  } else if (prediction == WT && outcome == NOTTAKEN) {
+    PHT[index] = WN;
+  } else if (prediction == WT && outcome == TAKEN) {
+    PHT[index] = ST;
+  } else if (prediction == ST && outcome == NOTTAKEN) {
+    PHT[index] = WT;
+  }
   
+  historyReg <<= outcome;
 }

@@ -28,6 +28,8 @@ int lhistoryBits; // Number of bits used for Local History
 int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
+int print1 = 1;
+int counter = 0;
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -75,10 +77,10 @@ make_prediction(uint32_t pc)
     case GSHARE:
         // use a mask to get the lower # of bits where the # of bits = ghistoryBits
         pcMasked = pc & ((1 << ghistoryBits)-1);
-        // mask the history reg
-        regMasked = historyReg & ((1 << ghistoryBits)-1);
+        if(counter < 20){printf("PC: %d, PC masked : %d\n", pc, pcMasked);}
+        if(counter < 20){printf("Reg: %d\n", historyReg);}
         // XOR the global history register with the masked pc to get the index into the PHT
-        index = regMasked ^ pcMasked;
+        index = historyReg ^ pcMasked;
         // use the index to retrieve the prediction from the PHT
         prediction = PHT[index];
 
@@ -131,5 +133,15 @@ train_predictor(uint32_t pc, uint8_t outcome)
     PHT[index] = WT;
   }
   
-  historyReg <<= outcome;
+  if(counter < 20){
+    printf("\t Training: Outcome: %d\n",    outcome);
+    printf("\t Training: reg before: %d\n", historyReg);
+  }
+
+  historyReg <<= 1;
+  historyReg |= outcome;
+  historyReg = historyReg & ((1 << ghistoryBits)-1);
+
+  if(counter < 20){ printf("\t Training: reg after:  %d\n", historyReg);}
+  counter++;
 }

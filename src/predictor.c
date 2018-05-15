@@ -28,7 +28,7 @@ int lhistoryBits; // Number of bits used for Local History
 int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
-int print1 = 1;
+//TESTING
 int counter = 0;
 
 //------------------------------------//
@@ -46,8 +46,7 @@ uint32_t historyReg;
 
 // Initialize the predictor
 //
-void
-init_predictor()
+void gshare_init_predictor() 
 {
   // initialize to WN (Weakly Not Taken)
   for (int i = 0; i < maxNumEntries; i++) {
@@ -58,40 +57,71 @@ init_predictor()
   historyReg = NOTTAKEN;
 }
 
+void tournament_init_predictor() 
+{
+
+}
+
+void
+init_predictor()
+{
+  switch (bpType) {
+    case GSHARE:
+      gshare_init_predictor();
+      break;
+    case TOURNAMENT:
+      tournament_init_predictor();
+      break;
+    default:
+      break;
+  }
+}
+
 // Make a prediction for conditional branch instruction at PC 'pc'
 // Returning TAKEN indicates a prediction of taken; returning NOTTAKEN
 // indicates a prediction of not taken
 //
 uint8_t
+gshare_make_prediction(uint32_t pc)
+{
+  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  uint32_t pcMasked = pc & ((1 << ghistoryBits)-1);
+
+  //TESTING
+  if(counter < 20){
+    printf("Make prediction: PC = %d, PC masked = %d\n", pc, pcMasked); 
+    printf("Make prediction: Reg = %d\n", historyReg);
+  }
+
+  // XOR the global history register with the masked pc to get the index into the PHT
+  uint32_t index = historyReg ^ pcMasked;
+  // use the index to retrieve the prediction from the PHT
+  uint8_t prediction = PHT[index];
+
+  if (prediction == WT || prediction == ST) {
+    return TAKEN;
+  } 
+  // otherwise, return NOTTAKEN (for WN and SN)
+  return NOTTAKEN;
+}
+
+uint8_t
+tournament_make_prediction(uint32_t pc)
+{
+  return NOTTAKEN;
+}
+
+uint8_t
 make_prediction(uint32_t pc)
 {
-  uint32_t pcMasked;
-  uint32_t regMasked;
-  uint32_t index;
-  uint8_t prediction;
-
   // Make a prediction based on the bpType
   switch (bpType) {
     case STATIC:
       return TAKEN;
     case GSHARE:
-        // use a mask to get the lower # of bits where the # of bits = ghistoryBits
-        pcMasked = pc & ((1 << ghistoryBits)-1);
-        if(counter < 20){printf("PC: %d, PC masked : %d\n", pc, pcMasked);}
-        if(counter < 20){printf("Reg: %d\n", historyReg);}
-        // XOR the global history register with the masked pc to get the index into the PHT
-        index = historyReg ^ pcMasked;
-        // use the index to retrieve the prediction from the PHT
-        prediction = PHT[index];
-
-        if (prediction == WT || prediction == ST) {
-          return TAKEN;
-        } 
-        else if (prediction == WN || prediction == SN) {
-          return NOTTAKEN;
-        }
-        break;
+      return gshare_make_prediction(pc);
     case TOURNAMENT:
+      return tournament_make_prediction(pc);
     case CUSTOM:
     default:
       break;
@@ -105,8 +135,8 @@ make_prediction(uint32_t pc)
 // outcome 'outcome' (true indicates that the branch was taken, false
 // indicates that the branch was not taken)
 //
-void
-train_predictor(uint32_t pc, uint8_t outcome)
+void 
+gshare_train_predictor(uint32_t pc, uint8_t outcome)
 {
   uint32_t pcMasked;
   uint32_t index;
@@ -133,15 +163,38 @@ train_predictor(uint32_t pc, uint8_t outcome)
     PHT[index] = WT;
   }
   
+  //TESTING
   if(counter < 20){
-    printf("\t Training: Outcome: %d\n",    outcome);
-    printf("\t Training: reg before: %d\n", historyReg);
+    printf("\t Training: outcome    = %d\n", outcome);
+    printf("\t Training: reg before = %d\n", historyReg);
   }
 
   historyReg <<= 1;
   historyReg |= outcome;
   historyReg = historyReg & ((1 << ghistoryBits)-1);
 
-  if(counter < 20){ printf("\t Training: reg after:  %d\n", historyReg);}
+  //TESTING
+  if(counter < 20){ printf("\t Training: reg after  = %d\n\n", historyReg);}
   counter++;
+}
+
+void
+tournament_train_predictor(uint32_t pc, uint8_t outcome)
+{
+
+}
+
+void
+train_predictor(uint32_t pc, uint8_t outcome)
+{
+  switch (bpType) {
+    case GSHARE:
+      gshare_train_predictor(pc, outcome);
+      break;
+    case TOURNAMENT:
+      tournament_train_predictor(pc, outcome);
+      break;
+    default:
+      break;
+  }
 }

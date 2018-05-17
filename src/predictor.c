@@ -207,7 +207,66 @@ gshare_train_predictor(uint32_t pc, uint8_t outcome)
 void
 tournament_train_predictor(uint32_t pc, uint8_t outcome)
 {
+  uint32_t pcMasked;
+  uint32_t index;
+  uint32_t index;
+  uint8_t prediction;
 
+  //**** Train Local Predictor ****
+  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  pcMasked = pc & ((1 << lhistoryBits)-1);
+
+  // use the last lhistoryBits of pc to index into LHT
+  index = localHistTable[pcMasked];
+
+  // use the bits in LHT[pc] to index into localPrediction or BHT
+  prediction = localPrediction[index];
+
+  // Check whether the localPrediction is correct and update using 2-bit predictor
+  if (prediction == SN && outcome == TAKEN) {
+    localPrediction[index] = WN;
+  } else if (prediction == WN && outcome == NOTTAKEN) {
+    localPrediction[index] = SN;
+  } else if (prediction == WN && outcome == TAKEN) {
+    localPrediction[index] = WT;
+  } else if (prediction == WT && outcome == NOTTAKEN) {
+    localPrediction[index] = WN;
+  } else if (prediction == WT && outcome == TAKEN) {
+    localPrediction[index] = ST;
+  } else if (prediction == ST && outcome == NOTTAKEN) {
+    localPrediction[index] = WT;
+  }
+
+  // update localHistTable with outcome
+  localHistTable[pcMasked] <<= 1;
+  localHistTable[pcMasked] |= outcome;
+  localHistTable[pcMasked] = localHistTable[pcMasked] & ((1 << lhistoryBits)-1);
+
+  //**** Train Global Predictor ****
+  // use the index to retrieve the prediction from the PHT
+  prediction = globalPrediction[historyReg];
+
+  // Check whether the localPrediction is correct and update using 2-bit predictor
+  if (prediction == SN && outcome == TAKEN) {
+    globalPrediction[index] = WN;
+  } else if (prediction == WN && outcome == NOTTAKEN) {
+    globalPrediction[index] = SN;
+  } else if (prediction == WN && outcome == TAKEN) {
+    globalPrediction[index] = WT;
+  } else if (prediction == WT && outcome == NOTTAKEN) {
+    globalPrediction[index] = WN;
+  } else if (prediction == WT && outcome == TAKEN) {
+    globalPrediction[index] = ST;
+  } else if (prediction == ST && outcome == NOTTAKEN) {
+    globalPrediction[index] = WT;
+  }
+
+  historyReg <<= 1;
+  historyReg |= outcome;
+  historyReg = historyReg & ((1 << ghistoryBits)-1);
+
+  //**** Train Choice Predictor ****
+  //choicePrediction
 }
 
 void

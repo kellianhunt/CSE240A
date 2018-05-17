@@ -38,7 +38,7 @@ int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 //TESTING
-int counter = 0;
+//int counter = 0;
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -234,12 +234,12 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   local_prediction = localPrediction[index];
 
   // TESTING
-  //if (counter < 20) {
-  //  printf("====Local Prediction Training====\n");
-  //  printf("\tPC: %d, Masked PC/1st index:         %d\n", pc, pcMasked);
-  //  printf("\tLocal History Table value/2nd index: %d\n", localHistTable[pcMasked]);
-  //  printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
-  //}
+  // if (counter < 20) {
+  //   printf("====Local Prediction Training====\n");
+  //   printf("\tPC: %d, Masked PC/1st index:         %d\n", pc, pcMasked);
+  //   printf("\tLocal History Table value/2nd index: %d\n", localHistTable[pcMasked]);
+  //   printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+  // }
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
   if (local_prediction == SN && outcome == TAKEN) {
@@ -261,24 +261,24 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   localHistTable[pcMasked] |= outcome;
   localHistTable[pcMasked] = localHistTable[pcMasked] & ((1 << lhistoryBits)-1);
 
-  // TESTING
-  //if (counter < 20) {
-  //  printf("\tOutcome:                             %d\n", outcome);
-  //  printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
-  //  printf("\tLocal history table value:           %d\n\n", localHistTable[pcMasked]);
-  //}
+  // // TESTING
+  // if (counter < 20) {
+  //   printf("\tOutcome:                             %d\n", outcome);
+  //   printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+  //   printf("\tLocal history table value:           %d\n\n", localHistTable[pcMasked]);
+  // }
 
   //**** Train Global Predictor ****
   // use the index to retrieve the prediction from the PHT
   global_prediction = globalPrediction[historyReg];
 
-  // TESTING
-  //if (counter < 20) {
-  //  printf("====Global Prediction Training====\n");
-  //  printf("\tIndex/global history reg: %d\n", historyReg);
-  //  printf("\tGlobal prediction:        %d\n", global_prediction);
-  //  printf("\tOutcome:                  %d\n", outcome);
-  //}
+  // // TESTING
+  // if (counter < 20) {
+  //   printf("====Global Prediction Training====\n");
+  //   printf("\tIndex/global history reg: %d\n", historyReg);
+  //   printf("\tGlobal prediction:        %d\n", global_prediction);
+  //   printf("\tOutcome:                  %d\n", outcome);
+  // }
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
   index = historyReg;
@@ -301,10 +301,10 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   historyReg = historyReg & ((1 << ghistoryBits)-1);
 
   // TESTING
-  //if(counter < 20) {
-  //  printf("\tNew global prediction:    %d\n", globalPrediction[index]);
-  //  printf("\tNew global history reg:   %d\n\n", historyReg);
-  //}
+  // if(counter < 20) {
+  //   printf("\tNew global prediction:    %d\n", globalPrediction[index]);
+  //   printf("\tNew global history reg:   %d\n\n", historyReg);
+  // }
 
   //**** Train Choice Predictor ****
   // mask pc with ghistoryBits
@@ -336,15 +336,16 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
       choicePrediction[index] = SG;
     } else if (choice == WG && global_choice != outcome) {
       choicePrediction[index] = WL;
-    } else if (choice == WL && global_choice != outcome) {
+    } else if (choice == WL && local_choice != outcome) {
       choicePrediction[index] = WG;
-    } else if (choice == WL && global_choice == outcome) {
+    } else if (choice == WL && local_choice == outcome) {
       choicePrediction[index] = SL;
-    } else if (choice == SL && global_choice != outcome) {
+    } else if (choice == SL && local_choice != outcome) {
       choicePrediction[index] = WL;
     }
   }
-  counter++;
+  // TESTING
+  //counter++;
 }
 
 void

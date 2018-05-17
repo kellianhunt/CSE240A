@@ -21,8 +21,8 @@
 // TODO:Student Information
 //
 const char *studentName = "Kellian Hunt, Angelique Taylor";
-const char *studentID   = "A53244070, ";
-const char *email       = "kchunt@eng.ucsd.edu, ";
+const char *studentID   = "A53244070, A53230147";
+const char *email       = "kchunt@eng.ucsd.edu, amt062@eng.ucsd.edu";
 
 //------------------------------------//
 //      Predictor Configuration       //

@@ -8,11 +8,14 @@
 #include <stdio.h>
 #include "predictor.h"
 #define maxEntriesGshare 1 << 13
-// 10 bits of the pc address
 #define maxEntriesLocalHistTable 1 << 10
 #define maxEntriesLocalPrediction 1 << 10
-#define maxEntriesGlobalPrediction 1 << 12
-#define maxEntriesChoicePrediction 1 << 12
+#define maxEntriesGlobalPrediction 1 << 9
+#define maxEntriesChoicePrediction 1 << 10
+#define SL  0			// predict local, strong not local
+#define WL  1			// predict local, weak not local
+#define WG  2			// predict global, weak global
+#define SG  3			// predict global, strong global
 
 //
 // TODO:Student Information
@@ -35,7 +38,7 @@ int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 //TESTING
-int counter = 0;
+//int counter = 0;
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -73,19 +76,22 @@ void gshare_init_predictor()
 
 void tournament_init_predictor() 
 {
+  // initialize local predictors
   for (int i = 0; i < maxEntriesLocalHistTable; i++) {
-    localHistTable[i] = SN;
+    localHistTable[i] = NOTTAKEN;
   }
   for (int i = 0; i < maxEntriesLocalPrediction; i++) {
-    localPrediction[i] = SN;
+    localPrediction[i] = WN;
   }
+  // initialize global predictors
+  historyReg = NOTTAKEN;
   for (int i = 0; i < maxEntriesGlobalPrediction; i++) {
-    globalPrediction[i] = SN;
+    globalPrediction[i] = WN;
   }
+  // initialize choice predictor
   for (int i = 0; i < maxEntriesChoicePrediction; i++) {
-    choicePrediction[i] = SN;
+    choicePrediction[i] = WG;
   }
-
 }
 
 void
@@ -114,10 +120,10 @@ gshare_make_prediction(uint32_t pc)
   uint32_t pcMasked = pc & ((1 << ghistoryBits)-1);
 
   //TESTING
-  if(counter < 20){
-    printf("Make prediction: PC = %d, PC masked = %d\n", pc, pcMasked); 
-    printf("Make prediction: Reg = %d\n", historyReg);
-  }
+  //if(counter < 20){
+  //  printf("Make prediction: PC = %d, PC masked = %d\n", pc, pcMasked); 
+  //  printf("Make prediction: Reg = %d\n", historyReg);
+  //}
 
   // XOR the global history register with the masked pc to get the index into the PHT
   uint32_t index = historyReg ^ pcMasked;
@@ -134,6 +140,28 @@ gshare_make_prediction(uint32_t pc)
 uint8_t
 tournament_make_prediction(uint32_t pc)
 {
+  // local prediction
+  uint32_t local_pcMasked = pc & ((1 << lhistoryBits)-1);
+  uint32_t local_hist = localHistTable[local_pcMasked];
+  uint8_t local_prediction = localPrediction[local_hist];
+
+  // global prediction
+  uint8_t global_prediction = globalPrediction[historyReg];
+
+  // choice prediction
+  uint32_t choice_pcMasked = pc & ((1 << pcIndexBits)-1);
+  uint8_t choice = choicePrediction[choice_pcMasked];
+
+  // if the choice leans towards the local predictor:
+  if (choice == WL || choice == SL) {
+    if (local_prediction == WT || local_prediction == ST) 
+      return TAKEN;
+    return NOTTAKEN;  
+  } 
+
+  // if the choice leans towards the global predictor:
+  if (global_prediction == WT || global_prediction == ST)
+    return TAKEN;
   return NOTTAKEN;
 }
 
@@ -190,18 +218,18 @@ gshare_train_predictor(uint32_t pc, uint8_t outcome)
   }
   
   //TESTING
-  if(counter < 20){
-    printf("\t Training: outcome    = %d\n", outcome);
-    printf("\t Training: reg before = %d\n", historyReg);
-  }
+  //if(counter < 20){
+  //  printf("\t Training: outcome    = %d\n", outcome);
+  //  printf("\t Training: reg before = %d\n", historyReg);
+  //}
 
   historyReg <<= 1;
   historyReg |= outcome;
   historyReg = historyReg & ((1 << ghistoryBits)-1);
 
   //TESTING
-  if(counter < 20){ printf("\t Training: reg after  = %d\n\n", historyReg);}
-  counter++;
+  //if(counter < 20){ printf("\t Training: reg after  = %d\n\n", historyReg);}
+  //counter++;
 }
 
 void

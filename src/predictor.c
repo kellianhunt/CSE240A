@@ -238,7 +238,7 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   uint32_t pcMasked;
   uint32_t index;
   uint32_t index;
-  uint8_t prediction;
+  uint8_t local_prediction, global_prediction;
 
   //**** Train Local Predictor ****
   // use a mask to get the lower # of bits where the # of bits = ghistoryBits
@@ -248,20 +248,20 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   index = localHistTable[pcMasked];
 
   // use the bits in LHT[pc] to index into localPrediction or BHT
-  prediction = localPrediction[index];
+  local_prediction = localPrediction[index];
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
-  if (prediction == SN && outcome == TAKEN) {
+  if (local_prediction == SN && outcome == TAKEN) {
     localPrediction[index] = WN;
-  } else if (prediction == WN && outcome == NOTTAKEN) {
+  } else if (local_prediction == WN && outcome == NOTTAKEN) {
     localPrediction[index] = SN;
-  } else if (prediction == WN && outcome == TAKEN) {
+  } else if (local_prediction == WN && outcome == TAKEN) {
     localPrediction[index] = WT;
-  } else if (prediction == WT && outcome == NOTTAKEN) {
+  } else if (local_prediction == WT && outcome == NOTTAKEN) {
     localPrediction[index] = WN;
-  } else if (prediction == WT && outcome == TAKEN) {
+  } else if (local_prediction == WT && outcome == TAKEN) {
     localPrediction[index] = ST;
-  } else if (prediction == ST && outcome == NOTTAKEN) {
+  } else if (local_prediction == ST && outcome == NOTTAKEN) {
     localPrediction[index] = WT;
   }
 
@@ -272,20 +272,20 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 
   //**** Train Global Predictor ****
   // use the index to retrieve the prediction from the PHT
-  prediction = globalPrediction[historyReg];
+  global_prediction = globalPrediction[historyReg];
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
-  if (prediction == SN && outcome == TAKEN) {
+  if (global_prediction == SN && outcome == TAKEN) {
     globalPrediction[index] = WN;
-  } else if (prediction == WN && outcome == NOTTAKEN) {
+  } else if (global_prediction == WN && outcome == NOTTAKEN) {
     globalPrediction[index] = SN;
-  } else if (prediction == WN && outcome == TAKEN) {
+  } else if (global_prediction == WN && outcome == TAKEN) {
     globalPrediction[index] = WT;
-  } else if (prediction == WT && outcome == NOTTAKEN) {
+  } else if (global_prediction == WT && outcome == NOTTAKEN) {
     globalPrediction[index] = WN;
-  } else if (prediction == WT && outcome == TAKEN) {
+  } else if (global_prediction == WT && outcome == TAKEN) {
     globalPrediction[index] = ST;
-  } else if (prediction == ST && outcome == NOTTAKEN) {
+  } else if (global_prediction == ST && outcome == NOTTAKEN) {
     globalPrediction[index] = WT;
   }
 

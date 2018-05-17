@@ -7,7 +7,13 @@
 //========================================================//
 #include <stdio.h>
 #include "predictor.h"
-#define maxNumEntries 1 << 13
+#define maxEntriesGshare 1 << 13
+// 10 bits of the pc address
+#define maxEntriesLocalHistTable 1 << 10
+#define maxEntriesLocalPrediction 1 << 10
+#define maxEntriesGlobalPrediction 1 << 12
+#define maxEntriesChoicePrediction 1 << 12
+
 //
 // TODO:Student Information
 //
@@ -35,10 +41,18 @@ int counter = 0;
 //      Predictor Data Structures     //
 //------------------------------------//
 
+// gshare data structures:
 // in our PHT, 00 = 0 (SN, Strongly Not Taken), 01 = 1 (WN, Weakly Not Taken)
 //             10 = 2 (WT, Weakly Taken), and 11 = 3 (ST, Strongly Taken)
-uint8_t PHT[maxNumEntries];
+uint8_t PHT[maxEntriesGshare];
+// also used by tournament:
 uint32_t historyReg;
+
+// tournament data structures:
+uint8_t localHistTable[maxEntriesLocalHistTable];
+uint8_t localPrediction[maxEntriesLocalPrediction];
+uint8_t globalPrediction[maxEntriesGlobalPrediction];
+uint8_t choicePrediction[maxEntriesChoicePrediction];
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -49,7 +63,7 @@ uint32_t historyReg;
 void gshare_init_predictor() 
 {
   // initialize to WN (Weakly Not Taken)
-  for (int i = 0; i < maxNumEntries; i++) {
+  for (int i = 0; i < maxEntriesGshare; i++) {
     PHT[i] = WN;
   }
 
@@ -59,7 +73,18 @@ void gshare_init_predictor()
 
 void tournament_init_predictor() 
 {
+  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
 
+  }
+  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
+
+  }
+  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
+
+  }
+  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
+
+  }
 }
 
 void

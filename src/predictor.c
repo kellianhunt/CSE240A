@@ -20,9 +20,9 @@
 //
 // TODO:Student Information
 //
-const char *studentName = "NAME";
-const char *studentID   = "PID";
-const char *email       = "EMAIL";
+const char *studentName = "Kellian Hunt, Angelique Taylor";
+const char *studentID   = "A53244070, ";
+const char *email       = "kchunt@eng.ucsd.edu, ";
 
 //------------------------------------//
 //      Predictor Configuration       //
@@ -38,7 +38,7 @@ int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
 //TESTING
-//int counter = 0;
+int counter = 0;
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -130,9 +130,9 @@ gshare_make_prediction(uint32_t pc)
   // use the index to retrieve the prediction from the PHT
   uint8_t prediction = PHT[index];
 
-  if (prediction == WT || prediction == ST) {
+  if (prediction == WT || prediction == ST) 
     return TAKEN;
-  } 
+
   // otherwise, return NOTTAKEN (for WN and SN)
   return NOTTAKEN;
 }
@@ -237,11 +237,10 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 {
   uint32_t pcMasked;
   uint32_t index;
-  uint32_t index;
   uint8_t local_prediction, global_prediction;
 
   //**** Train Local Predictor ****
-  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  // use a mask to get the lower # of bits where the # of bits = lhistoryBits
   pcMasked = pc & ((1 << lhistoryBits)-1);
 
   // use the last lhistoryBits of pc to index into LHT
@@ -249,6 +248,15 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 
   // use the bits in LHT[pc] to index into localPrediction or BHT
   local_prediction = localPrediction[index];
+
+  // TESTING
+  if (counter < 10) {
+    printf("====Local Prediction Training====\n");
+    printf("\tPC: %d, Masked PC/1st index:         %d\n", pc, pcMasked);
+    printf("\tLocal History Table value/2nd index: %d\n", localHistTable[pcMasked]);
+    printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+    counter++;
+  }
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
   if (local_prediction == SN && outcome == TAKEN) {
@@ -270,11 +278,20 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   localHistTable[pcMasked] |= outcome;
   localHistTable[pcMasked] = localHistTable[pcMasked] & ((1 << lhistoryBits)-1);
 
+  // TESTING
+  if (counter < 10) {
+    printf("\tOutcome:                             %d\n", outcome);
+    printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+    printf("\tLocal history table value:           %d\n\n", localHistTable[pcMasked]);
+  }
+
+
   //**** Train Global Predictor ****
   // use the index to retrieve the prediction from the PHT
   global_prediction = globalPrediction[historyReg];
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
+  index = historyReg;
   if (global_prediction == SN && outcome == TAKEN) {
     globalPrediction[index] = WN;
   } else if (global_prediction == WN && outcome == NOTTAKEN) {
@@ -295,10 +312,9 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 
   //**** Train Choice Predictor ****
   // mask pc with pcIndexBits
-  uint32_t choice_pcMasked = pc & ((1 << pcIndexBits)-1);
-
+  index = pc & ((1 << pcIndexBits)-1);
   // get bits in choice prediction table
-  uint8_t choice = choicePrediction[choice_pcMasked];
+  uint8_t choice = choicePrediction[index];
 
 
   uint8_t global_choice;
@@ -318,7 +334,19 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   // if the global and local predictors disagree, then train the choice predictor
   if (global_choice != local_choice) {
     // state machine
-    
+    if (choice == SG && global_choice != outcome) {
+      choicePrediction[index] = WG;
+    } else if (choice == WG && global_choice == outcome) {
+      choicePrediction[index] = SG;
+    } else if (choice == WG && global_choice != outcome) {
+      choicePrediction[index] = WL;
+    } else if (choice == WL && global_choice != outcome) {
+      choicePrediction[index] = WG;
+    } else if (choice == WL && global_choice == outcome) {
+      choicePrediction[index] = SL;
+    } else if (choice == SL && global_choice != outcome) {
+      choicePrediction[index] = WL;
+    }
   }
 }
 

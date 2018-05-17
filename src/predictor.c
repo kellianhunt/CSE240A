@@ -300,7 +300,26 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   // get bits in choice prediction table
   uint8_t choice = choicePrediction[choice_pcMasked];
 
-  
+
+  uint8_t global_choice;
+  if (global_prediction == WT || global_prediction == ST) {
+    global_choice = TAKEN;
+  } else {
+    global_choice = NOTTAKEN;
+  }
+
+  uint8_t local_choice;
+  if (local_prediction == WT || local_prediction == ST) {
+    local_choice = TAKEN;
+  } else {
+    local_choice = NOTTAKEN;
+  }  
+
+  // if the global and local predictors disagree, then train the choice predictor
+  if (global_choice != local_choice) {
+    // state machine
+    
+  }
 }
 
 void

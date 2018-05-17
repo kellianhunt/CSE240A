@@ -294,7 +294,13 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   historyReg = historyReg & ((1 << ghistoryBits)-1);
 
   //**** Train Choice Predictor ****
-  //choicePrediction
+  // mask pc with pcIndexBits
+  uint32_t choice_pcMasked = pc & ((1 << pcIndexBits)-1);
+
+  // get bits in choice prediction table
+  uint8_t choice = choicePrediction[choice_pcMasked];
+
+  
 }
 
 void

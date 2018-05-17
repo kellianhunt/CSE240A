@@ -49,7 +49,7 @@ uint8_t PHT[maxEntriesGshare];
 uint32_t historyReg;
 
 // tournament data structures:
-uint8_t localHistTable[maxEntriesLocalHistTable];
+uint32_t localHistTable[maxEntriesLocalHistTable];
 uint8_t localPrediction[maxEntriesLocalPrediction];
 uint8_t globalPrediction[maxEntriesGlobalPrediction];
 uint8_t choicePrediction[maxEntriesChoicePrediction];
@@ -74,17 +74,18 @@ void gshare_init_predictor()
 void tournament_init_predictor() 
 {
   for (int i = 0; i < maxEntriesLocalHistTable; i++) {
-
+    localHistTable[i] = SN;
   }
-  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
-
+  for (int i = 0; i < maxEntriesLocalPrediction; i++) {
+    localPrediction[i] = SN;
   }
-  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
-
+  for (int i = 0; i < maxEntriesGlobalPrediction; i++) {
+    globalPrediction[i] = SN;
   }
-  for (int i = 0; i < maxEntriesLocalHistTable; i++) {
-
+  for (int i = 0; i < maxEntriesChoicePrediction; i++) {
+    choicePrediction[i] = SN;
   }
+
 }
 
 void

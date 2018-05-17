@@ -119,12 +119,6 @@ gshare_make_prediction(uint32_t pc)
   // use a mask to get the lower # of bits where the # of bits = ghistoryBits
   uint32_t pcMasked = pc & ((1 << ghistoryBits)-1);
 
-  //TESTING
-  //if(counter < 20){
-  //  printf("Make prediction: PC = %d, PC masked = %d\n", pc, pcMasked); 
-  //  printf("Make prediction: Reg = %d\n", historyReg);
-  //}
-
   // XOR the global history register with the masked pc to get the index into the PHT
   uint32_t index = historyReg ^ pcMasked;
   // use the index to retrieve the prediction from the PHT
@@ -141,7 +135,7 @@ uint8_t
 tournament_make_prediction(uint32_t pc)
 {
   // local prediction
-  uint32_t local_pcMasked = pc & ((1 << lhistoryBits)-1);
+  uint32_t local_pcMasked = pc & ((1 << pcIndexBits)-1);
   uint32_t local_hist = localHistTable[local_pcMasked];
   uint8_t local_prediction = localPrediction[local_hist];
 
@@ -149,7 +143,7 @@ tournament_make_prediction(uint32_t pc)
   uint8_t global_prediction = globalPrediction[historyReg];
 
   // choice prediction
-  uint32_t choice_pcMasked = pc & ((1 << pcIndexBits)-1);
+  uint32_t choice_pcMasked = pc & ((1 << ghistoryBits)-1);
   uint8_t choice = choicePrediction[choice_pcMasked];
 
   // if the choice leans towards the local predictor:
@@ -216,20 +210,10 @@ gshare_train_predictor(uint32_t pc, uint8_t outcome)
   } else if (prediction == ST && outcome == NOTTAKEN) {
     PHT[index] = WT;
   }
-  
-  //TESTING
-  //if(counter < 20){
-  //  printf("\t Training: outcome    = %d\n", outcome);
-  //  printf("\t Training: reg before = %d\n", historyReg);
-  //}
 
   historyReg <<= 1;
   historyReg |= outcome;
   historyReg = historyReg & ((1 << ghistoryBits)-1);
-
-  //TESTING
-  //if(counter < 20){ printf("\t Training: reg after  = %d\n\n", historyReg);}
-  //counter++;
 }
 
 void
@@ -241,7 +225,7 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 
   //**** Train Local Predictor ****
   // use a mask to get the lower # of bits where the # of bits = lhistoryBits
-  pcMasked = pc & ((1 << lhistoryBits)-1);
+  pcMasked = pc & ((1 << pcIndexBits)-1);
 
   // use the last lhistoryBits of pc to index into LHT
   index = localHistTable[pcMasked];
@@ -250,13 +234,12 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   local_prediction = localPrediction[index];
 
   // TESTING
-  if (counter < 10) {
-    printf("====Local Prediction Training====\n");
-    printf("\tPC: %d, Masked PC/1st index:         %d\n", pc, pcMasked);
-    printf("\tLocal History Table value/2nd index: %d\n", localHistTable[pcMasked]);
-    printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
-    counter++;
-  }
+  //if (counter < 20) {
+  //  printf("====Local Prediction Training====\n");
+  //  printf("\tPC: %d, Masked PC/1st index:         %d\n", pc, pcMasked);
+  //  printf("\tLocal History Table value/2nd index: %d\n", localHistTable[pcMasked]);
+  //  printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+  //}
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
   if (local_prediction == SN && outcome == TAKEN) {
@@ -279,16 +262,23 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   localHistTable[pcMasked] = localHistTable[pcMasked] & ((1 << lhistoryBits)-1);
 
   // TESTING
-  if (counter < 10) {
-    printf("\tOutcome:                             %d\n", outcome);
-    printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
-    printf("\tLocal history table value:           %d\n\n", localHistTable[pcMasked]);
-  }
-
+  //if (counter < 20) {
+  //  printf("\tOutcome:                             %d\n", outcome);
+  //  printf("\tLocal prediction table value:        %d\n", localPrediction[index]);
+  //  printf("\tLocal history table value:           %d\n\n", localHistTable[pcMasked]);
+  //}
 
   //**** Train Global Predictor ****
   // use the index to retrieve the prediction from the PHT
   global_prediction = globalPrediction[historyReg];
+
+  // TESTING
+  //if (counter < 20) {
+  //  printf("====Global Prediction Training====\n");
+  //  printf("\tIndex/global history reg: %d\n", historyReg);
+  //  printf("\tGlobal prediction:        %d\n", global_prediction);
+  //  printf("\tOutcome:                  %d\n", outcome);
+  //}
 
   // Check whether the localPrediction is correct and update using 2-bit predictor
   index = historyReg;
@@ -310,9 +300,15 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
   historyReg |= outcome;
   historyReg = historyReg & ((1 << ghistoryBits)-1);
 
+  // TESTING
+  //if(counter < 20) {
+  //  printf("\tNew global prediction:    %d\n", globalPrediction[index]);
+  //  printf("\tNew global history reg:   %d\n\n", historyReg);
+  //}
+
   //**** Train Choice Predictor ****
-  // mask pc with pcIndexBits
-  index = pc & ((1 << pcIndexBits)-1);
+  // mask pc with ghistoryBits
+  index = pc & ((1 << ghistoryBits)-1);
   // get bits in choice prediction table
   uint8_t choice = choicePrediction[index];
 
@@ -348,6 +344,7 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
       choicePrediction[index] = WL;
     }
   }
+  counter++;
 }
 
 void

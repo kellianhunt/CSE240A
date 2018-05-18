@@ -61,7 +61,8 @@ uint8_t choicePrediction[maxEntriesChoicePrediction];
 
 // Initialize the predictor
 //
-void gshare_init_predictor() 
+void 
+gshare_init_predictor() 
 {
   // initialize to WN (Weakly Not Taken)
   for (int i = 0; i < maxEntriesGshare; i++) {
@@ -72,7 +73,8 @@ void gshare_init_predictor()
   historyReg = NOTTAKEN;
 }
 
-void tournament_init_predictor() 
+void 
+tournament_init_predictor() 
 {
   // initialize local predictors
   for (int i = 0; i < maxEntriesLocalHistTable; i++) {
@@ -93,6 +95,12 @@ void tournament_init_predictor()
 }
 
 void
+custom_init_predictor()
+{
+
+}
+
+void
 init_predictor()
 {
   switch (bpType) {
@@ -101,6 +109,9 @@ init_predictor()
       break;
     case TOURNAMENT:
       tournament_init_predictor();
+      break;
+    case CUSTOM:
+      custom_init_predictor();
       break;
     default:
       break;
@@ -157,6 +168,12 @@ tournament_make_prediction(uint32_t pc)
 }
 
 uint8_t
+custom_make_prediction(uint32_t pc)
+{
+  return NOTTAKEN;
+}
+
+uint8_t
 make_prediction(uint32_t pc)
 {
   // Make a prediction based on the bpType
@@ -168,6 +185,7 @@ make_prediction(uint32_t pc)
     case TOURNAMENT:
       return tournament_make_prediction(pc);
     case CUSTOM:
+      return custom_make_prediction(pc);
     default:
       break;
   }
@@ -313,6 +331,12 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 }
 
 void
+custom_train_predictor(uint32_t pc, uint8_t outcome)
+{
+
+}
+
+void
 train_predictor(uint32_t pc, uint8_t outcome)
 {
   switch (bpType) {
@@ -321,6 +345,9 @@ train_predictor(uint32_t pc, uint8_t outcome)
       break;
     case TOURNAMENT:
       tournament_train_predictor(pc, outcome);
+      break;
+    case CUSTOM:
+      custom_train_predictor(pc, outcome);
       break;
     default:
       break;

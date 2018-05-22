@@ -12,6 +12,8 @@
 #define maxEntriesLocalPrediction 1 << 10
 #define maxEntriesGlobalPrediction 1 << 9
 #define maxEntriesChoicePrediction 1 << 10
+#define maxPTHeight 1 << 15
+#define maxPTWidth 1 << 15
 #define SL  0			// predict local, strong not local
 #define WL  1			// predict local, weak not local
 #define WG  2			// predict global, weak global
@@ -55,6 +57,11 @@ uint8_t localPrediction[maxEntriesLocalPrediction];
 uint8_t globalPrediction[maxEntriesGlobalPrediction];
 uint8_t choicePrediction[maxEntriesChoicePrediction];
 
+//Custom data structures:
+int8_t PT[maxPTWidth][maxPTHeight]; //Perceptron Table
+int theta;
+int8_t globalHR[maxPTWidth]; // global history reg
+
 //------------------------------------//
 //        Predictor Functions         //
 //------------------------------------//
@@ -97,7 +104,19 @@ tournament_init_predictor()
 void
 custom_init_predictor()
 {
+  // initialize theta
+  theta = 100;
 
+  // initialize Percetron table and global history reg
+  for (int i = 0; i < maxPTWidth; i++) {
+    globalHR[i] = 0;
+    for (int j = 0; j < maxPTHeight; j++){
+      PT[i][j] = 0;
+    }
+  }
+
+  // initialize historyReg
+  historyReg = NOTTAKEN;
 }
 
 void
@@ -170,7 +189,27 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  return NOTTAKEN;
+  uint32_t pcMasked;
+  int8_t weights[ghistoryBits];
+  int y = 0;
+
+  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  pcMasked = pc & ((1 << pcIndexBits)-1);
+
+  // index into PT for weight vector
+  for (int i = 0; i < ghistoryBits; i++){
+    weights[i] = PT[pcMasked][i];
+  }
+
+  // Make prediction
+  for (int i = 0; i < ghistoryBits; i++){
+    y = y + weights[i] * globalHR[i];
+  }
+
+  if( y < 0 ){
+    return NOTTAKEN;
+  }
+  return TAKEN;
 }
 
 uint8_t
@@ -333,7 +372,42 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome)
 {
+  uint32_t pcMasked;
+  int8_t weights[ghistoryBits];
+  int y = 0;
+  uint8_t prediction;
 
+  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
+  pcMasked = pc & ((1 << pcIndexBits)-1);
+
+  // index into PT for weight vector
+  for (int i = 0; i < ghistoryBits; i++){
+    weights[i] = PT[pcMasked][i];
+  }
+
+  // Make prediction
+  for (int i = 0; i < ghistoryBits; i++){
+    y = y + weights[i] * globalHR[i];
+  }
+
+  if( y < 0 ){
+    prediction = NOTTAKEN;
+  }
+  else{
+    prediction = TAKEN;
+  }
+
+  // update weights
+  if( prediction == outcome || abs(y) <= theta ){
+    for (int i = 0; i < ghistoryBits; i++){
+      weights[i] = weights[i] + outcome*globalHR[i];
+    }
+  }
+
+  // update PT
+  for( int i = 0; i < ghistoryBits; i++ ){
+    PT[pcMasked][i] = weights[i];
+  }
 }
 
 void

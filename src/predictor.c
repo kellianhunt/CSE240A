@@ -110,11 +110,16 @@ custom_init_predictor()
 
   // initialize Percetron table and global history reg
   for (int i = 0; i < maxPTWidth; i++) {
-    globalHR[i] = 0;
+    globalHR[i] = -1;
     for (int j = 0; j < maxPTHeight; j++){
       PT[i][j] = 0;
     }
   }
+
+  globalHR[1] = 1;
+  globalHR[2] = -1;
+  globalHR[3] = 1;
+  globalHR[4] = 1;
 
   // bias
   globalHR[0] = 1;
@@ -436,11 +441,9 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   }
 
   // update ghr
-  for (int i = 1; i < ghistoryBits - 1; i++){
+  for (int i = 1; i < ghistoryBits-1; i++)
     globalHR[i] = globalHR[i+1];
-  }
-  globalHR[0] = 1;
-  globalHR[ghistoryBits] = outcome_temp;
+  globalHR[ghistoryBits-1] = outcome_temp;
 
   if (counter < 20) {
   printf("New GHR: [");

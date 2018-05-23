@@ -12,8 +12,11 @@
 #define maxEntriesLocalPrediction 1 << 10
 #define maxEntriesGlobalPrediction 1 << 9
 #define maxEntriesChoicePrediction 1 << 10
-#define maxPTHeight 1 << 15
-#define maxPTWidth 1 << 15
+#define maxPTHeight 17
+#define maxPTWidth 113
+#define maxThreshold 1.93 * ghistoryBits + 14
+#define maxWeight 127
+#define minWeight -128
 #define SL  0			// predict local, strong not local
 #define WL  1			// predict local, weak not local
 #define WG  2			// predict global, weak global
@@ -40,6 +43,7 @@ int lhistoryBits; // Number of bits used for Local History
 int pcIndexBits;  // Number of bits used for PC index
 int bpType;       // Branch Prediction Type
 int verbose;
+int numEntries;   // for custom
 
 //------------------------------------//
 //      Predictor Data Structures     //
@@ -59,9 +63,10 @@ uint8_t globalPrediction[maxEntriesGlobalPrediction];
 uint8_t choicePrediction[maxEntriesChoicePrediction];
 
 //Custom data structures:
-int8_t PT[maxPTWidth][maxPTHeight]; //Perceptron Table
-int theta;
-int8_t globalHR[maxPTWidth]; // global history reg
+int16_t PT[maxPTWidth][maxPTHeight]; //Perceptron Table
+int8_t globalHR[maxPTHeight]; // global history reg
+int16_t weights[maxPTHeight];
+
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -105,24 +110,28 @@ tournament_init_predictor()
 void
 custom_init_predictor()
 {
-  // initialize theta
-  theta = 100;
+  ghistoryBits = 17;
+  numEntries = 113;
 
   // initialize Percetron table and global history reg
   for (int i = 0; i < maxPTWidth; i++) {
-    globalHR[i] = -1;
     for (int j = 0; j < maxPTHeight; j++){
       PT[i][j] = 0;
     }
   }
 
-  globalHR[1] = 1;
-  globalHR[2] = -1;
-  globalHR[3] = 1;
-  globalHR[4] = 1;
-
+  // initialize global history reg
+  for (int i = 0; i < maxPTWidth; i++) {
+    globalHR[i] = -1;
+  }
   // bias
   globalHR[0] = 1;
+
+  // initialize weights
+  for (int i = 0; i < maxWeight; i++) {
+    weights[i] = 0;
+  }
+
 }
 
 void
@@ -195,21 +204,20 @@ tournament_make_prediction(uint32_t pc)
 uint8_t
 custom_make_prediction(uint32_t pc)
 {
-  uint32_t pcMasked;
-  int8_t weights[ghistoryBits];
+  uint32_t pcIndex;
   int y = 0;
 
-  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
-  pcMasked = pc & ((1 << pcIndexBits)-1);
-
+  // use a mask to get the lower # of bits where the # of bits = pcIndexBits
+  pcIndex = pc % numEntries;
+  
   // index into PT for weight vector
   for (int i = 0; i < ghistoryBits; i++){
-    weights[i] = PT[pcMasked][i];
+    weights[i] = PT[pcIndex][i];
   }
 
   // Make prediction
   for (int i = 0; i < ghistoryBits; i++){
-    y = y + weights[i] * globalHR[i];
+    y += weights[i] * globalHR[i];
   }
 
   if( y < 0 ){
@@ -378,8 +386,7 @@ tournament_train_predictor(uint32_t pc, uint8_t outcome)
 void
 custom_train_predictor(uint32_t pc, uint8_t outcome)
 {
-  uint32_t pcMasked;
-  int8_t weights[ghistoryBits];
+  uint32_t pcIndex;
   int y = 0;
   uint8_t prediction;
   int outcome_temp;
@@ -391,17 +398,17 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
     outcome_temp = -1;
   }
 
-  // use a mask to get the lower # of bits where the # of bits = ghistoryBits
-  pcMasked = pc & ((1 << pcIndexBits)-1);
-
+  // use a mask to get the lower # of bits where the # of bits = pcIndexBits
+  pcIndex = pc % numEntries;
+  
   // index into PT for weight vector
   for (int i = 0; i < ghistoryBits; i++){
-    weights[i] = PT[pcMasked][i];
+    weights[i] = PT[pcIndex][i];
   }
 
   // Make prediction
   for (int i = 0; i < ghistoryBits; i++){
-    y = y + weights[i] * globalHR[i];
+    y += weights[i] * globalHR[i];
   }
 
   if( y < 0 ){
@@ -412,47 +419,46 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   }
 
   // update weights
-  if( prediction == outcome || abs(y) <= theta ){
+  if(prediction != outcome || abs(y) < maxThreshold) {
     for (int i = 0; i < ghistoryBits; i++){
-      weights[i] = weights[i] + outcome_temp*globalHR[i];
+		  weights[i] = weights[i] + outcome_temp*globalHR[i];
+  
+      // don't let it use more than 8 bits each weight
+      if (weights[i] < minWeight)
+        weights[i] = minWeight;
+      if (weights[i] > maxWeight)
+        weights[i] = maxWeight;
     }
   }
-
-  if(counter < 20){
-  printf("New weights: [");
-  for (int i = 0; i < ghistoryBits -1; i++) {
-      printf("%d, ", weights[i]);
-  }
-  printf("%d]\n", weights[ghistoryBits]);
-  }
-
  
   // update PT
   for( int i = 0; i < ghistoryBits; i++ ){
-    PT[pcMasked][i] = weights[i];
+    PT[pcIndex][i] = weights[i];
   }
 
-  if (counter < 20) {
-  printf("New PT: [");
-  for (int i = 0; i < ghistoryBits - 1; i++){
-    printf("%d, ", PT[pcMasked][i]);
-  }
-  printf("%d]\n", PT[pcMasked][ghistoryBits]);
-  }
+  // TESTING
+  // if (counter < 20) {
+  // printf("New PT: [");
+  // for (int i = 0; i < ghistoryBits - 1; i++){
+  //   printf("%d, ", PT[pcIndex][i]);
+  // }
+  // printf("%d]\n", PT[pcIndex][ghistoryBits]);
+  // }
 
   // update ghr
   for (int i = 1; i < ghistoryBits-1; i++)
     globalHR[i] = globalHR[i+1];
   globalHR[ghistoryBits-1] = outcome_temp;
 
-  if (counter < 20) {
-  printf("New GHR: [");
-  for (int i = 0; i < ghistoryBits - 1; i++){
-    printf("%d, ", globalHR[i]);
-  }
-  printf("%d]\n", globalHR[ghistoryBits]);
-  }
-  counter++;
+  // TESTING
+  // if (counter < 20) {
+  //   printf("New GHR: [");
+  //   for (int i = 0; i < ghistoryBits - 1; i++){
+  //     printf("%d, ", globalHR[i]);
+  //   }
+  //   printf("%d]\n", globalHR[ghistoryBits]);
+  // }
+  // counter++;
 }
 
 void

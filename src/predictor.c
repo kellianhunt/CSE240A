@@ -115,8 +115,8 @@ custom_init_predictor()
     }
   }
 
-  // initialize historyReg
-  historyReg = NOTTAKEN;
+  // bias
+  globalHR[0] = 1;
 }
 
 void
@@ -376,6 +376,14 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   int8_t weights[ghistoryBits];
   int y = 0;
   uint8_t prediction;
+  int outcome_temp;
+
+  if(outcome == TAKEN){
+    outcome_temp = 1;
+  }
+  else{
+    outcome_temp = -1;
+  }
 
   // use a mask to get the lower # of bits where the # of bits = ghistoryBits
   pcMasked = pc & ((1 << pcIndexBits)-1);
@@ -397,17 +405,28 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
     prediction = TAKEN;
   }
 
+  int counter = 0; // for testing
   // update weights
   if( prediction == outcome || abs(y) <= theta ){
     for (int i = 0; i < ghistoryBits; i++){
-      weights[i] = weights[i] + outcome*globalHR[i];
+      weights[i] = weights[i] + outcome_temp*globalHR[i];
+      printf("weights: %d, outcome_temp: %d, globalHR: %d\n",weights[i],outcome_temp,globalHR[i]);
     }
+    //printf("updating weights: %d, y: %d\n",counter,y);
+    counter+=1;
   }
 
   // update PT
   for( int i = 0; i < ghistoryBits; i++ ){
     PT[pcMasked][i] = weights[i];
   }
+
+  // update ghr
+  for (int i = 1; i < ghistoryBits - 1; i++){
+    globalHR[i] = globalHR[i+1];
+  }
+  globalHR[0] = 1;
+  globalHR[ghistoryBits] = outcome_temp;
 }
 
 void

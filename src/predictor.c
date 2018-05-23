@@ -25,6 +25,7 @@
 const char *studentName = "Kellian Hunt, Angelique Taylor";
 const char *studentID   = "A53244070, A53230147";
 const char *email       = "kchunt@eng.ucsd.edu, amt062@eng.ucsd.edu";
+int counter = 0;
 
 //------------------------------------//
 //      Predictor Configuration       //
@@ -405,20 +406,33 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
     prediction = TAKEN;
   }
 
-  int counter = 0; // for testing
   // update weights
   if( prediction == outcome || abs(y) <= theta ){
     for (int i = 0; i < ghistoryBits; i++){
       weights[i] = weights[i] + outcome_temp*globalHR[i];
-      printf("weights: %d, outcome_temp: %d, globalHR: %d\n",weights[i],outcome_temp,globalHR[i]);
     }
-    //printf("updating weights: %d, y: %d\n",counter,y);
-    counter+=1;
   }
 
+  if(counter < 20){
+  printf("New weights: [");
+  for (int i = 0; i < ghistoryBits -1; i++) {
+      printf("%d, ", weights[i]);
+  }
+  printf("%d]\n", weights[ghistoryBits]);
+  }
+
+ 
   // update PT
   for( int i = 0; i < ghistoryBits; i++ ){
     PT[pcMasked][i] = weights[i];
+  }
+
+  if (counter < 20) {
+  printf("New PT: [");
+  for (int i = 0; i < ghistoryBits - 1; i++){
+    printf("%d, ", PT[pcMasked][i]);
+  }
+  printf("%d]\n", PT[pcMasked][ghistoryBits]);
   }
 
   // update ghr
@@ -427,6 +441,15 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   }
   globalHR[0] = 1;
   globalHR[ghistoryBits] = outcome_temp;
+
+  if (counter < 20) {
+  printf("New GHR: [");
+  for (int i = 0; i < ghistoryBits - 1; i++){
+    printf("%d, ", globalHR[i]);
+  }
+  printf("%d]\n", globalHR[ghistoryBits]);
+  }
+  counter++;
 }
 
 void

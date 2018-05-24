@@ -12,8 +12,8 @@
 #define maxEntriesLocalPrediction 1 << 10
 #define maxEntriesGlobalPrediction 1 << 9
 #define maxEntriesChoicePrediction 1 << 10
-#define maxPTHeight 17
-#define maxPTWidth 113
+#define maxPTHeight 50
+#define maxPTWidth 200
 #define maxThreshold 1.93 * ghistoryBits + 14
 #define maxWeight 127
 #define minWeight -128
@@ -65,8 +65,6 @@ uint8_t choicePrediction[maxEntriesChoicePrediction];
 //Custom data structures:
 int16_t PT[maxPTWidth][maxPTHeight]; //Perceptron Table
 int8_t globalHR[maxPTHeight]; // global history reg
-int16_t weights[maxPTHeight];
-
 
 //------------------------------------//
 //        Predictor Functions         //
@@ -111,7 +109,7 @@ void
 custom_init_predictor()
 {
   ghistoryBits = 17;
-  numEntries = 113;
+  numEntries = 119;
 
   // initialize Percetron table and global history reg
   for (int i = 0; i < maxPTWidth; i++) {
@@ -126,12 +124,6 @@ custom_init_predictor()
   }
   // bias
   globalHR[0] = 1;
-
-  // initialize weights
-  for (int i = 0; i < maxWeight; i++) {
-    weights[i] = 0;
-  }
-
 }
 
 void
@@ -207,19 +199,15 @@ custom_make_prediction(uint32_t pc)
   uint32_t pcIndex;
   int y = 0;
 
-  // use a mask to get the lower # of bits where the # of bits = pcIndexBits
+  // hash the pc to get the index into the PT
   pcIndex = pc % numEntries;
   
-  // index into PT for weight vector
+  // Make prediction using weights
   for (int i = 0; i < ghistoryBits; i++){
-    weights[i] = PT[pcIndex][i];
+    y += PT[pcIndex][i] * globalHR[i];
   }
 
-  // Make prediction
-  for (int i = 0; i < ghistoryBits; i++){
-    y += weights[i] * globalHR[i];
-  }
-
+  // predict TAKEN if non-negative
   if( y < 0 ){
     return NOTTAKEN;
   }
@@ -391,6 +379,7 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   uint8_t prediction;
   int outcome_temp;
 
+  // interpret the outcome as a negative or positive number
   if(outcome == TAKEN){
     outcome_temp = 1;
   }
@@ -398,19 +387,15 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
     outcome_temp = -1;
   }
 
-  // use a mask to get the lower # of bits where the # of bits = pcIndexBits
+  // hash the pc to get the pc index
   pcIndex = pc % numEntries;
   
-  // index into PT for weight vector
+  // Make prediction using weights
   for (int i = 0; i < ghistoryBits; i++){
-    weights[i] = PT[pcIndex][i];
+    y += PT[pcIndex][i] * globalHR[i];
   }
 
-  // Make prediction
-  for (int i = 0; i < ghistoryBits; i++){
-    y += weights[i] * globalHR[i];
-  }
-
+  // if non-negative, the prediction was TAKEN
   if( y < 0 ){
     prediction = NOTTAKEN;
   }
@@ -421,19 +406,14 @@ custom_train_predictor(uint32_t pc, uint8_t outcome)
   // update weights
   if(prediction != outcome || abs(y) < maxThreshold) {
     for (int i = 0; i < ghistoryBits; i++){
-		  weights[i] = weights[i] + outcome_temp*globalHR[i];
+		  PT[pcIndex][i] += outcome_temp*globalHR[i];
   
       // don't let it use more than 8 bits each weight
-      if (weights[i] < minWeight)
-        weights[i] = minWeight;
-      if (weights[i] > maxWeight)
-        weights[i] = maxWeight;
+      if (PT[pcIndex][i] < minWeight)
+        PT[pcIndex][i] = minWeight;
+      if (PT[pcIndex][i] > maxWeight)
+        PT[pcIndex][i] = maxWeight;
     }
-  }
- 
-  // update PT
-  for( int i = 0; i < ghistoryBits; i++ ){
-    PT[pcIndex][i] = weights[i];
   }
 
   // TESTING

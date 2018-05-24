@@ -3,6 +3,16 @@
 //                                                        //
 //  Students need to implement various Branch Predictors  //
 //========================================================//
+//  Our custom predictor uses a perceptron table (PT) of  //
+//  weights - a 119 by 17 table with each entry being     //
+//  8 bits each (ranging from -128 to 127). We also use   //
+//  an array that represents the global history register. // 
+//  It has 17 slots and its state can be represented as   // 
+//  binary taken or not taken. Therefore, the GHR can be  //
+//  represented by 17 bits.                               //
+//  In total, our data structures use:                    //
+//  119 x 17 x 8 + 17 = 16201 bits                        //
+//========================================================//
 
 #define _GNU_SOURCE
 #include <stdio.h>
